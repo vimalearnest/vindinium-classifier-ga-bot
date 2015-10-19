@@ -1,6 +1,7 @@
 import re
 
 from collections import deque
+import heapq
 
 TAVERN = 0
 AIR = -1
@@ -26,14 +27,16 @@ class Game:
     def __init__(self, state):
         self.state = state
         self.board = Board(state['game']['board'])
+        self.threat_map = [ [0 for i in range(self.board.size)] for j in range(self.board.size)]
         self.enemies = {}
         for i in range(len(state['game']['heroes'])):
             if ( state['game']['heroes'][i]['id'] != state['hero']['id'] ):
                 new_enemy = Hero( state['game']['heroes'][i] )
+                print "enemy position %d %d" % (new_enemy.pos[0],new_enemy.pos[1])
                 self.enemies[new_enemy.pos] = new_enemy
 
         self.hero = Hero(state['hero'])
-        self.bfs()
+        self.dijkstra ()
 
     def update(self, state):
         """Update paths, enemy positions, and mine ownership"""
@@ -47,14 +50,14 @@ class Game:
         self.hero = Hero(state['hero'])
         for k,v in self.board.mines.iteritems():
             v.update_owner(state['game']['board']['tiles'])
-        self.bfs()
+        self.dijkstra()
 
     def get_path( self, node ):
         path = []
-        loc, distance, this_node = node
+        distance, loc, this_node = node
         while ( this_node ):
             to_row, to_col = loc
-            loc, distance, this_node = this_node
+            distance, loc, this_node = this_node
             from_row, from_col = loc
             path.append( REVERSE_AIM[(from_row-to_row,from_col-to_col)] )
         path.reverse()
@@ -69,16 +72,18 @@ class Game:
             v.path = None
 
 
+
+        
     def bfs(self):
         frontier_queue = deque([])
         frontier_dict = {}
         explored = {}
-        frontier_queue.append( (self.hero.pos, 0, None) )
-        frontier_dict[self.hero.pos] = (self.hero.pos, 0, None)
+        frontier_queue.append( (0, self.hero.pos, None) )
+        frontier_dict[self.hero.pos] = (0, self.hero.pos, None)
 
         while ( frontier_queue ):
             node = frontier_queue.popleft()
-            loc, distance, parent = node
+            distance, loc, parent = node
             
             del frontier_dict[loc]
             explored[loc] = node
@@ -86,7 +91,7 @@ class Game:
             for direction,coords in enumerate(AIM):
                 next_loc = self.board.to(loc, coords)
                 if next_loc:
-                    next_node = ( next_loc, distance + 1, node )
+                    next_node = ( distance + 1, next_loc, node )
                     if next_loc in self.board.mines:
                         if not self.board.mines[next_loc].path:
                             self.board.mines[next_loc].path = self.get_path(next_node)
@@ -112,6 +117,82 @@ class Game:
                         frontier_queue.append( next_node )
                         frontier_dict[next_loc] = next_node
 
+    def threat_update(self):
+        self.threat_map = [ [0 for i in range(self.board.size)] for j in range(self.board.size)]
+        enemy_num = 0;
+        for pos,enemy in self.enemies.iteritems():
+            enemy_num+=1
+            threat = 5
+            frontier_queue = deque([])
+            frontier_dict = {}
+            frontier_dict[enemy.pos] = (threat, enemy.pos)
+            explored = {}
+            frontier_queue.append( (threat, enemy.pos ) )
+            self.threat_map[enemy.pos[0]][enemy.pos[1]] = threat
+            while threat > 1 and frontier_queue:
+                node = frontier_queue.popleft()
+                threat, loc = node
+                threat -= 1
+                del frontier_dict[loc]
+                explored[loc] = node
+                for direction,coords in enumerate(AIM):
+                    next_loc = self.board.to(loc, coords)
+                    if next_loc:
+                        next_node = ( threat, next_loc )
+                        if (next_loc not in explored
+                                and next_loc not in frontier_dict
+                                and self.board.passable(next_loc)):
+                            self.threat_map[next_loc[0]][next_loc[1]] += threat
+                            frontier_queue.append( next_node )
+                            frontier_dict[next_loc] = next_node
+        #for m in self.threat_map:
+            #for token in m:
+                #print token,
+            #print "\""
+    def dijkstra(self):
+        "Claculate paths taking tile threat values into account"
+        self.threat_update()
+        frontier_queue = []
+        frontier_dict = {}
+        explored = {}
+        heapq.heappush(frontier_queue, (0, self.hero.pos, None) )
+        frontier_dict[self.hero.pos] = (0, self.hero.pos, None)
+
+        while ( frontier_queue ):
+            node = heapq.heappop(frontier_queue)
+            distance, loc, parent = node
+            
+            del frontier_dict[loc]
+            explored[loc] = node
+
+            for direction,coords in enumerate(AIM):
+                next_loc = self.board.to(loc, coords)
+                if next_loc:
+                    next_node = ( distance + 1 + self.threat_map[next_loc[0]][next_loc[1]], next_loc, node )
+                    if next_loc in self.board.mines:
+                        if not self.board.mines[next_loc].path:
+                            self.board.mines[next_loc].path = self.get_path(next_node)
+                            #print "Path to Mine = ",
+                            #print self.board.mines[next_loc].path,
+                            #print "  ",
+                            #print next_loc
+                    elif next_loc in self.enemies:
+                        if not self.enemies[next_loc].path:
+                            self.enemies[next_loc].path = self.get_path(next_node)
+                            #print "Path to enemy = ",
+                            #print self.enemies[next_loc].path,
+                            #print "  ",
+                    elif next_loc in self.board.taverns:
+                        if not self.board.taverns[next_loc].path:
+                            self.board.taverns[next_loc].path = self.get_path(next_node)
+                            #print "Path to Tavern = ",
+                            #print self.board.taverns[next_loc].path,
+                            #print "  ",
+                    elif (next_loc not in explored
+                            and next_loc not in frontier_dict
+                            and self.board.passable(next_loc)):
+                        heapq.heappush(frontier_queue, next_node )
+                        frontier_dict[next_loc] = next_node
 
         
 
