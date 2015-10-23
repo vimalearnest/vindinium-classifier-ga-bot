@@ -25,34 +25,38 @@ REVERSE_AIM = {(-1,0): 'South',
 
 class Game:
     def __init__(self, state):
-        self.state = state
         self.board = Board(state['game']['board'])
         self.threat_map = [ [0 for i in range(self.board.size)] for j in range(self.board.size)]
-        self.enemies = {}
-        for i in range(len(state['game']['heroes'])):
-            if ( state['game']['heroes'][i]['id'] != state['hero']['id'] ):
-                new_enemy = Hero( state['game']['heroes'][i] )
-                print "enemy position %d %d" % (new_enemy.pos[0],new_enemy.pos[1])
-                self.enemies[new_enemy.pos] = new_enemy
-
-        self.hero = Hero(state['hero'])
-        self.dijkstra ()
+        self.hero = Hero(state['hero'], True)
+        self.update(state)
 
     def update(self, state):
         """Update paths, enemy positions, and mine ownership"""
-        self.clear_paths()
         self.state = state
         self.enemies = {}
+        self.enemies_list = []
+        self.clear_paths()
         for i in range(len(state['game']['heroes'])):
             if ( state['game']['heroes'][i]['id'] != state['hero']['id'] ):
-                new_enemy = Hero( state['game']['heroes'][i] )
+                new_enemy = Hero( state['game']['heroes'][i], False )
                 self.enemies[new_enemy.pos] = new_enemy
-        self.hero = Hero(state['hero'])
+                self.enemies_list.append( new_enemy )
+        self.hero = Hero(state['hero'], True)
         for k,v in self.board.mines.iteritems():
-            v.update_owner(state['game']['board']['tiles'])
+            v.update_owner(state['game']['board']['tiles'],self.hero.ident)
         self.dijkstra()
+        for t in self.board.taverns_list:
+            t.set_value()
+        self.board.taverns_list.sort(key = Tavern.get_value)
+        for m in self.board.mines_list:
+            m.set_value()
+        self.board.mines_list.sort(key = Mine.get_value)
+        for e in self.enemies_list:
+            e.set_value()
+        self.enemies_list.sort(key = Hero.get_value)
 
     def get_path( self, node ):
+    """Return a path from a linked node list"""
         path = []
         distance, loc, this_node = node
         while ( this_node ):
@@ -64,6 +68,7 @@ class Game:
         return path
 
     def clear_paths(self):
+    """Clear the existing paths between locations"""
         for k,v in self.enemies.iteritems():
             v.path = None
         for k,v in self.board.taverns.iteritems():
@@ -75,6 +80,7 @@ class Game:
 
         
     def bfs(self):
+    """Calculate paths using breadth first search"""
         frontier_queue = deque([])
         frontier_dict = {}
         explored = {}
@@ -118,6 +124,7 @@ class Game:
                         frontier_dict[next_loc] = next_node
 
     def threat_update(self):
+    """Change the threat map for new enemy locations"""
         self.threat_map = [ [0 for i in range(self.board.size)] for j in range(self.board.size)]
         enemy_num = 0;
         for pos,enemy in self.enemies.iteritems():
@@ -150,7 +157,7 @@ class Game:
                 #print token,
             #print "\""
     def dijkstra(self):
-        "Claculate paths taking tile threat values into account"
+    """Claculate paths taking tile threat values into account"""
         self.threat_update()
         frontier_queue = []
         frontier_dict = {}
@@ -200,18 +207,43 @@ class Game:
 class Tavern:
     def __init__(self):
         self.path = None
+        self.set_value()
+    def set_value(self):
+        self.value = 999
+        if ( None != self.path ):
+            self.value = len(self.path)
+    def get_value(self):
+        return self.value
 
 class Mine:
     def __init__(self, owner_char_index):
         self.path = None
         self.owner = None
+        self.me = False
         self._owner_char_index = owner_char_index
+        self.set_value()
 
-    def update_owner(self, tiles):
+    def update_owner(self, tiles, me_ident):
         if '-' == tiles[self._owner_char_index]:
             self.owner = None
         else:
             self.owner = int(tiles[self._owner_char_index])
+            if (int(self.owner) == me_ident):
+                self.me = True
+            else:
+                self.me = False
+
+    def set_value(self):
+        if ( None == self.path ):
+            self.value = 999
+        elif ( None == self.owner ):
+            self.value = len(self.path)
+        elif ( not self.me ):
+            self.value = len(self.path) + 2
+        else:
+            self.value = 999
+    def get_value(self):
+        return self.value
 
 class Board:
     def _parseTile(self, row, col, token):
@@ -221,9 +253,11 @@ class Board:
             return WALL
         if (token == '[]'):
             self.taverns[(row,col)] = Tavern()
+            self.taverns_list.append( self.taverns[(row,col)] )
             return TAVERN
         if (token[0] == '$'):
             self.mines[(row,col)] = Mine( row*self.size*2 + col*2 + 1 )
+            self.mines_list.append( self.mines[(row,col)] )
             return MINE
 
     def _parseTiles(self, tiles):
@@ -236,11 +270,13 @@ class Board:
     def __init__(self, board):
         self.size = board['size']
         self.taverns = {}
+        self.taverns_list = []
         self.mines = {}
+        self.mines_list = []
         self.tiles = self._parseTiles(board['tiles'])
 
     def passable(self, loc):
-        'true if can not walk through'
+        'true if can walk through'
         x, y = loc
         pos = self.tiles[x][y]
         return pos == AIR
@@ -266,12 +302,24 @@ class Board:
             print "\""
 
 class Hero:
-    def __init__(self, hero):
+    def __init__(self, hero, me):
         self.ident = hero['id']
         self.name = hero['name']
         self.pos = (hero['pos']['x'],hero['pos']['y'])
         self.spawn = (hero['spawnPos']['x'],hero['spawnPos']['y'])
         self.life = hero['life']
         self.gold = hero['gold']
+        self.mines = hero['mineCount']
         self.path = None
+        self.me = me
+        self.set_value()
+    def set_value(self):
+        if ( self.me ):
+            self.value = 999
+        elif ( None == self.path ):
+            self.value = 999
+        else:
+            self.value = len(self.path)
+    def get_value(self):
+        return self.value
 
