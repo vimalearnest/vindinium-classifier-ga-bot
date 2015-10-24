@@ -1,4 +1,7 @@
 class Message:
+"""Messages consist of a status list. that convey meaning on aspects of the current state.
+The message is created using the alphabet {0,1,2,3,4,5}"""
+# TODO Update the message format to have characters for indication the message source
     def __init__(self,game):
         self.status = []
 
@@ -40,6 +43,10 @@ class Message:
             self.status.extend(enemy[1])
         print self.status
     def rule_matches(self,classifier):
+    """Return true if a given classifier's rule matches the message.
+    A rule is said to match a message if the message value at each position is
+    in the list of the rule at that same position, or the rule value is None at
+    that position."""
         i = 0
         for x in classifier.rule:
             if ( None != x ):
