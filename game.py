@@ -56,7 +56,7 @@ class Game:
         self.enemies_list.sort(key = Hero.get_value)
 
     def get_path( self, node ):
-    """Return a path from a linked node list"""
+        """Return a path from a linked node list"""
         path = []
         distance, loc, this_node = node
         while ( this_node ):
@@ -68,7 +68,7 @@ class Game:
         return path
 
     def clear_paths(self):
-    """Clear the existing paths between locations"""
+        """Clear the existing paths between locations"""
         for k,v in self.enemies.iteritems():
             v.path = None
         for k,v in self.board.taverns.iteritems():
@@ -80,7 +80,7 @@ class Game:
 
         
     def bfs(self):
-    """Calculate paths using breadth first search"""
+        """Calculate paths using breadth first search"""
         frontier_queue = deque([])
         frontier_dict = {}
         explored = {}
@@ -124,7 +124,7 @@ class Game:
                         frontier_dict[next_loc] = next_node
 
     def threat_update(self):
-    """Change the threat map for new enemy locations"""
+        """Change the threat map for new enemy locations"""
         self.threat_map = [ [0 for i in range(self.board.size)] for j in range(self.board.size)]
         enemy_num = 0;
         for pos,enemy in self.enemies.iteritems():
@@ -157,7 +157,7 @@ class Game:
                 #print token,
             #print "\""
     def dijkstra(self):
-    """Claculate paths taking tile threat values into account"""
+        """Claculate paths taking tile threat values into account"""
         self.threat_update()
         frontier_queue = []
         frontier_dict = {}
