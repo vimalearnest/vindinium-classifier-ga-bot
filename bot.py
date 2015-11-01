@@ -8,6 +8,7 @@ class Bot:
 class TesterBot3000(Bot):
     def __init__(self):
         """Initialize the classifiers."""
+
         self.classifiers = []
         self.classifiers.append( Classifier() )
         self.classifiers.append( Classifier() )
