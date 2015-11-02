@@ -1,5 +1,8 @@
 from message import Message
 
+import random
+import string
+
 class Classifier:
     """A classifier consists of two parts.
         1. The rule is used to match against messages for when the classifier activates.
@@ -24,13 +27,19 @@ class Classifier:
     #   [1,2,3,4,5] }
     
     def __init__(self):
-        self.rule = []
+        self.conditions = []
+        self.strength = 1
         self.output = []
+        self.identifier = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10))
 
     def check_activate( self, messages ):
-        """Return true if the message activates the rule."""
+        """Return true if the messages activate the rule."""
+        conditions_to_match = self.conditions[:]
         for m in messages:
-            if ( m.rule_matches(self) ):
+            for c in conditions_to_match:
+                if ( m.rule_matches(c) ):
+                    conditions_to_match.remove(c)
+            if len(conditions_to_match) == 0:
                 return True
         return False
                 

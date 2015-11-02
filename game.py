@@ -152,10 +152,12 @@ class Game:
                             self.threat_map[next_loc[0]][next_loc[1]] += threat
                             frontier_queue.append( next_node )
                             frontier_dict[next_loc] = next_node
+        # Debugging print threat map
         #for m in self.threat_map:
             #for token in m:
                 #print token,
             #print "\""
+
     def dijkstra(self):
         """Claculate paths taking tile threat values into account"""
         self.threat_update()
