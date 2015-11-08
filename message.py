@@ -18,12 +18,13 @@ class Message:
                        'far_dist': 10,
                        'far_life': 11,
                        'far_mine': 12,
-                       'tavern_enemy_relative_distance': 3,
+                       'tavern_enemy_relative_distance': 13,
                      }
     first_enemy_index = game_msg_index['near_dist']
 
-    def __init__(self):
+    def __init__(self, emitter = None ):
         self.status = [0] * len(self.game_msg_index)
+        self.emitter = emitter
 
     def _relative_tavern_enemy_distance( self, tavern_dist, enemy_dist ):
         relative = tavern_dist - enemy_dist
@@ -37,7 +38,7 @@ class Message:
             return 3
         elif ( relative > -4 ):
             return 4
-        elif ( relative > -7 ):
+        else:
             return 5
 
     def _relative_distance( self, distance ):
@@ -85,7 +86,7 @@ class Message:
                 return 4
             elif ( mines > enemy_max ):
                 return 3
-            elif ( mines > enemy_max - 2 ):
+            else:
                 return 2
         elif ( mines > enemy_max + 3 ):
             return 5

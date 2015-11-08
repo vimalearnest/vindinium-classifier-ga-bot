@@ -28,18 +28,29 @@ class Classifier:
     
     def __init__(self):
         self.conditions = []
-        self.strength = 1
-        self.output = []
+        self.strength = 100
+        self.specifity = 0
+        self.output = None, 'RandomWalk'
         self.identifier = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10))
 
     def check_activate( self, messages ):
         """Return true if the messages activate the rule."""
         conditions_to_match = self.conditions[:]
+        self.source_classifiers = []
         for m in messages:
             for c in conditions_to_match:
                 if ( m.rule_matches(c) ):
                     conditions_to_match.remove(c)
+                    if ( None != m.emitter ):
+                        self.source_classifiers.append( m.emitter )
             if len(conditions_to_match) == 0:
                 return True
         return False
                 
+    def bid( self ):
+        bid = 0.1 * ( self.specifity / float( 5 * len(Message.game_msg_index) ) ) * self.strength
+        return bid
+    def pay( self, paid ):
+        self.strength += paid
+        if ( self.strength < 0 ):
+            self.strength = 0

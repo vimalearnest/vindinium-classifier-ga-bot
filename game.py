@@ -16,7 +16,8 @@ PLAYER4 = 4
 AIM = {'North': (-1, 0),
        'East':  ( 0, 1),
        'South': ( 1, 0),
-       'West':  ( 0,-1)}
+       'West':  ( 0,-1),
+       'Stay':  ( 0, 0)}
 REVERSE_AIM = {(-1,0): 'South',
                (0, 1): 'West',
                (1, 0): 'North',
