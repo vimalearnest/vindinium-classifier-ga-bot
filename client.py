@@ -5,7 +5,7 @@ import os
 import sys
 import requests
 import re
-from bot import RandomBot, SlowBot
+from bot import Voltron2000
 
 TIMEOUT=15
 
@@ -51,21 +51,25 @@ def move(session, url, direction):
 def is_finished(state):
     return state['game']['finished']
 
-def start(server_url, key, mode, turns, bot):
+def run_game(server_url, key, mode, turns, bot):
     """Starts a game with all the required parameters"""
 
     # Create a requests session that will be used throughout the game
     session = requests.session()
 
     if(mode=='arena'):
-        print(u'Connected and waiting for other players to join…')
+        print('Connected and waiting for other players to join…')
     # Get the initial state
     state = get_new_game_state(session, server_url, key, mode, turns)
+
+    # Initialize the bot
+    bot.new_game(state)
     print("Playing at: " + state['viewUrl'])
 
     while not is_finished(state):
         # Some nice output ;)
-        sys.stdout.write('.')
+        bot.update(state)
+        bot.pr()
         sys.stdout.flush()
 
         # Choose a move
@@ -73,6 +77,7 @@ def start(server_url, key, mode, turns, bot):
 
         # Send the move and receive the updated game state
         url = state['playUrl']
+        
         state = move(session, url, direction)
 
     # Clean up the session
@@ -100,5 +105,5 @@ if __name__ == "__main__":
             server_url = "http://vindinium.org"
 
         for i in range(number_of_games):
-            start(server_url, key, mode, number_of_turns, RandomBot())
+            run_game(server_url, key, mode, number_of_turns, Voltron2000())
             print("\nGame finished: %d/%d" % (i+1, number_of_games))
