@@ -1,41 +1,43 @@
+#
+# The bot playing the game
+#
 from game import Game
 
-import random
+class TesterBot3000:
+    def __init__(self, key, strategy):
+        """Initialize the bot with the given strategy
+        """
 
-class Voltron2000:
+        self.key = key
+        self.strategy = strategy
 
     def new_game(self, state):
-        """Initialize a new game
-        """
+        """Initialize the bot with a new game."""
 
         self.game = Game(state)
-   
-        hero = state['hero']
 
-        self.ident = hero['id']
-        self.name = hero['name']
-        self.pos = hero['pos']['x'], hero['pos']['y']
-        self.spawn_pos = hero['spawnPos']['x'], hero['spawnPos']['y']
-        self.life = hero['life']
-        self.gold = hero['gold']
-        self.mines = hero['mineCount']
+        print "I am player %s" % self.game.hero.ident
+        print "My position is at (%s, %s)" % self.game.hero.pos
 
-    def update(self, state):
-        self.game.update(state)
+
+        self.strategy.init(self.game)
+
+    def finish_game(self):
+        """Cleanup game state, book keeping stuff etc.
+        """
+
+        self.strategy.cleanup()
+
 
     def move(self, state):
-        """decide which move to take
-        """
-        
-        options = ['Stay', 'North', 'South', 'East', 'West']
-                 
-        move = random.choice(options)
-        return move
+        """Use the game state to decide the next move.
 
-    def pr(self):
+        Moves can be one of-
+         'Stay', 'North', 'South', 'East', 'West'
         """
-        """
-        self.game.pr()
-        
 
+        self.game.update(state)
 
+        next_move = self.strategy.next()
+
+        return next_move

@@ -5,7 +5,10 @@ import os
 import sys
 import requests
 import re
-from bot import Voltron2000
+import time
+
+from bot import TesterBot3000
+from strategy import RandomStrategy, ClassifierStrategy
 
 TIMEOUT=15
 
@@ -31,8 +34,8 @@ def get_new_game_state(session, server_url, key, mode='training', number_of_turn
 
 def move(session, url, direction):
     """Send a move to the server
-    
-    Moves can be one of: 'Stay', 'North', 'South', 'East', 'West' 
+
+    Moves can be one of: 'Stay', 'North', 'South', 'East', 'West'
     """
 
     try:
@@ -66,10 +69,21 @@ def run_game(server_url, key, mode, turns, bot):
     bot.new_game(state)
     print("Playing at: " + state['viewUrl'])
 
+    turn = 0
     while not is_finished(state):
         # Some nice output ;)
-        bot.update(state)
-        bot.pr()
+        turn += 1
+        gold_totals = "    \r" + str(turn) + \
+                " : " + str(bot.game.hero.gold) + \
+                " " + str(bot.game.enemies_list[0].gold) + \
+                " " + str(bot.game.enemies_list[1].gold) + \
+                " " + str(bot.game.enemies_list[2].gold) + \
+                " " + str(len(bot.strategy.matches)) + \
+                " " + bot.strategy.action.rjust(8) + \
+                " " + str(len(bot.strategy.input_interface))
+        #sys.stdout.write('.')
+        sys.stdout.write(gold_totals)
+
         sys.stdout.flush()
 
         # Choose a move
@@ -77,12 +91,12 @@ def run_game(server_url, key, mode, turns, bot):
 
         # Send the move and receive the updated game state
         url = state['playUrl']
-        
         state = move(session, url, direction)
 
     # Clean up the session
+    bot.finish_game()
     session.close()
-
+    time.sleep(2)
 
 if __name__ == "__main__":
     if (len(sys.argv) < 4):
@@ -95,7 +109,7 @@ if __name__ == "__main__":
         if(mode == "training"):
             number_of_games = 1
             number_of_turns = int(sys.argv[3])
-        else: 
+        else:
             number_of_games = int(sys.argv[3])
             number_of_turns = 300 # Ignored in arena mode
 
@@ -104,6 +118,11 @@ if __name__ == "__main__":
         else:
             server_url = "http://vindinium.org"
 
+        strategy = ClassifierStrategy(key)
+        bot = TesterBot3000(key, strategy)
+
         for i in range(number_of_games):
-            run_game(server_url, key, mode, number_of_turns, Voltron2000())
+            run_game(server_url, key, mode, number_of_turns, bot)
             print("\nGame finished: %d/%d" % (i+1, number_of_games))
+
+        strategy.pickle()
