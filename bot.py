@@ -1,69 +1,43 @@
+#
+# The bot playing the game
+#
 from game import Game
-from message import Message
-from classifier import Classifier
-from collections import deque
-from classifier_system import ClassifierSystem
 
-import random
+class TesterBot3000:
+    def __init__(self, key, strategy):
+        """Initialize the bot with the given strategy
+        """
 
-class Bot:
-    pass
-
-class TesterBot3000(Bot, ClassifierSystem):
-    def __init__(self):
-        """Initialize the bot's classifiers."""
-        self.input_interface = []
-        ClassifierSystem.__init__(self)
+        self.key = key
+        self.strategy = strategy
 
     def new_game(self, state):
         """Initialize the bot with a new game."""
+
         self.game = Game(state)
-        print "I am player",
-        print self.game.hero.ident
-        print "My position",
-        print self.game.hero.pos
-        self.expected_pos = self.game.hero.pos
-        self.prev_mines = 0
-        self.prev_gold = 0
+
+        print "I am player %s" % self.game.hero.ident
+        print "My position is at (%s, %s)" % self.game.hero.pos
+
+
+        self.strategy.init(self.game)
+
+    def finish_game(self):
+        """Cleanup game state, book keeping stuff etc.
+        """
+
+        self.strategy.cleanup()
+
 
     def move(self, state):
-        """Use the game state to decide what action to take, and then output
-           the direction to move."""
+        """Use the game state to decide the next move.
+
+        Moves can be one of-
+         'Stay', 'North', 'South', 'East', 'West'
+        """
+
         self.game.update(state)
-        print "Score :",
-        print self.game.hero.gold,
-        for pos,b in self.game.enemies.iteritems():
-            print b.gold,
-        print ""
 
-        self.game.board.print_board(state['game']['board']['tiles'])
+        next_move = self.strategy.next()
 
-        message = Message()
-        message.game_message(self.game)
-        self.input_interface.append( message )
-
-        out = self.decide()
-
-        retval = 'Stay'
-        if ( out == 'Heal' ):
-            if ( None != self.game.board.taverns_list[0].path ):
-                retval = self.game.board.taverns_list[0].path[0]
-        elif ( out == 'Mine' ):
-            if ( None != self.game.board.mines_list[0].path ):
-                retval = self.game.board.mines_list[0].path[0]
-        elif ( out == 'Attack' ):
-            if ( None != self.game.enemies_list[0].path ):
-                retval = self.game.enemies_list[0].path[0]
-        elif ( out == 'RandomWalk' ):
-            retval = random.choice(['North','South','East','West','Stay'])
-        elif ( out == 'Wait' ):
-            retval = 'Stay'
-        self.expected_pos = self.game.board.to( self.game.hero.pos, retval )
-        self.prev_mines = self.game.hero.mines
-        self.prev_gold = self.game.hero.gold
-        self._print_classifier_status()
-
-        return retval
-
-
-
+        return next_move
