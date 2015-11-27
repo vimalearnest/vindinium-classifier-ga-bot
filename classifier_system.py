@@ -83,6 +83,7 @@ class ClassifierSystem:
 
     def _get_test_classifiers(self):
         """Set the classifiers to a set of custom built classifiers"""
+
         c = [ Classifier() for x in range(7) ]
 
         # If you are less than 1/2 life, go heal
@@ -195,7 +196,6 @@ class ClassifierSystem:
         # TODO this does not work if you die on your spawn point
         if ( self.game.hero.pos != self.expected_pos
              and self.game.hero.pos == self.game.hero.spawn ):
-
              self._disburse(-15 * self.prev_mines )
              self.active = deque([])
         # If you didn't die, pay active classifers by the amount of gold gained
@@ -261,21 +261,66 @@ class ClassifierSystem:
 
         # Process the input_interface Messages
         self.matches = []
+=======
+             self._disburse(-100 * self.prev_mines / float(len(self.game.board.mines_list)))
+             self.active = deque([])
+        # If you didn't die, pay active classifers by the amount of gold gained
+        else:
+            # If you captured a mine, reward
+            if ( self.game.hero.mines > self.prev_mines ):
+                self._disburse(10 * (self.game.hero.mines - self.prev_mines) )
+
+            # For each currently owned mine
+            self._disburse( self.game.hero.mines )
+
+        if ( len(self.active) > 19 ):
+            self.active.popleft()
+
+    def _print_classifier_status( self ):
+        """Output for debugging"""
+        print "Classifier info"
+        for c in self.classifiers:
+            count = 0
+            for b in self.active:
+                for a in b:
+                    if a[0] == c:
+                        count += 1
+            print c.identifier,
+            print count,
+            print c.strength
+        print ""
+
+    def decide( self ):
+        """Decide what action to take this turn"""
+        self._credit_allocation();
+
+        # Process the input_interface Messages
+        matches = []
+>>>>>>> 9f141d2f1c33c6ab517714529f03280a060b7433
         messages = self.input_interface[:]
         self.input_interface = []
 
         # Find all classifiers that match the input messages
+<<<<<<< HEAD
         #print "match",
         for c in self.classifiers:
             if ( c.check_activate(messages) ):
                 #print c.identifier,
                 #print ",",
+=======
+        print "match",
+        for c in self.classifiers:
+            if ( c.check_activate(messages) ):
+                print c.identifier,
+                print ",",
+>>>>>>> 9f141d2f1c33c6ab517714529f03280a060b7433
                 message, action = c.output
                 if ( None == action ):
                     c.pay(c.bid())
                     if ( None != message ):
                         self.input_interface.append( message )
                 else:
+<<<<<<< HEAD
                     self.matches.append( ( c.bid(), c, c.source_classifiers ) )
         #print ""
 
@@ -291,17 +336,36 @@ class ClassifierSystem:
         choice = self._weighted_choice(self.matches)
         #print "choice",
         #print choice
+=======
+                    matches.append( ( c.bid(), c, c.source_classifiers ) )
+        print ""
+
+        # TODO if not enough matches, create more classifiers
+
+        # Choose an action from the matches to output
+        choice = self._weighted_choice(matches)
+        print "choice",
+        print choice
+>>>>>>> 9f141d2f1c33c6ab517714529f03280a060b7433
 
         # activate all of the classifiers that specified the chosen action
         # and send any output messages to the input interface
         if ( None != choice ):
             paid, winner = choice
             activated = []
+<<<<<<< HEAD
             for m in self.matches:
                 bid, c, source_classifiers = m
                 if c.output[1] == winner:
                     activated.append( (c, source_classifiers ) )
                     c.activate(paid)
+=======
+            for m in matches:
+                bid, c, source_classifiers = m
+                if c.output[1] == winner:
+                    activated.append( (c, source_classifiers ) )
+                    c.pay(-paid)
+>>>>>>> 9f141d2f1c33c6ab517714529f03280a060b7433
                     message, action = c.output
                     if ( None != message ):
                         self.input_interface.append( message )
@@ -310,6 +374,7 @@ class ClassifierSystem:
         else:
             return 'None'
 
+<<<<<<< HEAD
     def new_game(self):
         """Initialize the bot with a new game."""
 
@@ -342,3 +407,6 @@ class ClassifierSystem:
         f = open('data_'+self.key, 'w')
         pickle.dump(self.classifiers, f)
         f.close()
+=======
+
+>>>>>>> 9f141d2f1c33c6ab517714529f03280a060b7433
